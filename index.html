@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MindAR: Чотирикутник</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+      a-scene { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
+    </style>
+  </head>
+  <body>
+    <a-scene mindar-image="imageTargetSrc: targets.mind; maxTrack: 4" embedded>
+      <a-assets></a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- Маркери -->
+      <a-entity id="A" mindar-image-target="targetIndex: 0">
+        <a-sphere radius="0.1" color="red" position="0 0 0"></a-sphere>
+      </a-entity>
+      <a-entity id="B" mindar-image-target="targetIndex: 1">
+        <a-box depth="0.1" height="0.1" width="0.1" color="blue" position="0 0 0"></a-box>
+      </a-entity>
+      <a-entity id="C" mindar-image-target="targetIndex: 2">
+        <a-cylinder radius="0.05" height="0.1" color="green" position="0 0 0"></a-cylinder>
+      </a-entity>
+      <a-entity id="D" mindar-image-target="targetIndex: 3">
+        <a-cone radius-bottom="0.1" height="0.2" color="yellow" position="0 0 0"></a-cone>
+      </a-entity>
+
+      <!-- Вивід результатів -->
+      <a-text id="perimeter" value="Периметр: " position="0 1.5 -3" align="center" width="4" color="black"></a-text>
+      <a-text id="areas" value="Площі: " position="0 1.2 -3" align="center" width="4" color="black"></a-text>
+    </a-scene>
+
+    <script>
+      AFRAME.registerComponent('quad-metrics', {
+        init: function () {
+          this.markers = {
+            A: document.getElementById('A'),
+            B: document.getElementById('B'),
+            C: document.getElementById('C'),
+            D: document.getElementById('D'),
+          };
+
+          this.perimeterText = document.getElementById('perimeter');
+          this.areasText = document.getElementById('areas');
+        },
+
+        tick: function () {
+          // Отримуємо глобальні позиції
+          const positions = {};
+          let allVisible = true;
+          for (const id in this.markers) {
+            const marker = this.markers[id];
+            if (!marker.object3D.visible) {
+              allVisible = false;
+              break;
+            }
+            positions[id] = new THREE.Vector3();
+            marker.object3D.getWorldPosition(positions[id]);
+          }
+
+          if (!allVisible) return;
+
+          const A = positions['A'];
+          const B = positions['B'];
+          const C = positions['C'];
+          const D = positions['D'];
+
+          const perimeter =
+            A.distanceTo(B) +
+            B.distanceTo(C) +
+            C.distanceTo(D) +
+            D.distanceTo(A);
+
+          this.perimeterText.setAttribute('value', `Периметр: ${perimeter.toFixed(2)} м`);
+
+          const areaABC = this.triangleArea(A, B, C);
+          const areaACD = this.triangleArea(A, C, D);
+          const areaABD = this.triangleArea(A, B, D);
+          const areaBCD = this.triangleArea(B, C, D);
+
+          this.areasText.setAttribute(
+            'value',
+            `Площі: ABC=${areaABC.toFixed(2)} ACD=${areaACD.toFixed(2)} ABD=${areaABD.toFixed(2)} BCD=${areaBCD.toFixed(2)} м²`
+          );
+        },
+
+        triangleArea: function (A, B, C) {
+          const a = A.distanceTo(B);
+          const b = B.distanceTo(C);
+          const c = C.distanceTo(A);
+          const s = (a + b + c) / 2;
+          return Math.sqrt(s * (s - a) * (s - b) * (s - c));
+        }
+      });
+
+      document.querySelector('a-scene').setAttribute('quad-metrics', '');
+    </script>
+  </body>
+</html>
